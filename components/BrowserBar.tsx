@@ -11,7 +11,8 @@ import {
 } from 'react-native'
 import type WebView from 'react-native-webview'
 import { COLORS, FONT_SIZES, SPACING } from '@/constants/theme'
-import { DEFAULT_HOME_URL } from '@/constants/urls'
+import { useFavoriteStore } from '@/store/useFavoriteStore'
+import { buildSearchUrl, useSettingsStore } from '@/store/useSettingsStore'
 import { useCurrentTab, useTabStore } from '@/store/useTabStore'
 
 interface Props {
@@ -24,8 +25,18 @@ export default function BrowserBar({ webViewRef }: Props) {
   const tabs = useTabStore((s) => s.tabs)
   const updateTab = useTabStore((s) => s.updateTab)
 
+  const addFavorite = useFavoriteStore((s) => s.addFavorite)
+  const removeFavorite = useFavoriteStore((s) => s.removeFavorite)
+  const favorites = useFavoriteStore((s) => s.favorites)
+
+  const searchEngine = useSettingsStore((s) => s.searchEngine)
+  const customSearchUrl = useSettingsStore((s) => s.customSearchUrl)
+
   const [inputUrl, setInputUrl] = useState(tab.url)
   const [isFocused, setIsFocused] = useState(false)
+
+  const isOnPage = !!tab.url
+  const favorited = isOnPage && favorites.some((f) => f.url === tab.url)
 
   // Sync input with current tab URL when not focused
   useEffect(() => {
@@ -39,11 +50,10 @@ export default function BrowserBar({ webViewRef }: Props) {
       let trimmed = url.trim()
       if (!trimmed) return
 
-      // If it looks like a search query, don't add protocol
       const isUrl = trimmed.includes('.') && !trimmed.includes(' ')
 
       if (!isUrl) {
-        trimmed = `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`
+        trimmed = buildSearchUrl(searchEngine, customSearchUrl, trimmed)
       } else if (
         !trimmed.startsWith('http://') &&
         !trimmed.startsWith('https://')
@@ -55,7 +65,7 @@ export default function BrowserBar({ webViewRef }: Props) {
       setInputUrl(trimmed)
       Keyboard.dismiss()
     },
-    [tab.id, updateTab],
+    [tab.id, updateTab, searchEngine, customSearchUrl],
   )
 
   const handleBack = useCallback(() => {
@@ -66,17 +76,35 @@ export default function BrowserBar({ webViewRef }: Props) {
     webViewRef.current?.goForward()
   }, [webViewRef])
 
+  const handleHome = useCallback(() => {
+    updateTab(tab.id, {
+      url: '',
+      title: '',
+      canGoBack: false,
+      canGoForward: false,
+    })
+    setInputUrl('')
+  }, [tab.id, updateTab])
+
+  const handleToggleFavorite = useCallback(() => {
+    if (!tab.url) return
+    if (favorited) {
+      removeFavorite(tab.url)
+    } else {
+      addFavorite(tab.url, tab.title || tab.url)
+    }
+  }, [tab.url, tab.title, favorited, addFavorite, removeFavorite])
+
   const handleReload = useCallback(() => {
     webViewRef.current?.reload()
   }, [webViewRef])
 
-  const handleHome = useCallback(() => {
-    updateTab(tab.id, { url: DEFAULT_HOME_URL })
-    setInputUrl(DEFAULT_HOME_URL)
-  }, [tab.id, updateTab])
-
   const handleTabsPress = useCallback(() => {
     router.push('/tabs')
+  }, [router])
+
+  const handleSettingsPress = useCallback(() => {
+    router.push('/settings')
   }, [router])
 
   const handleFocus = useCallback(() => {
@@ -90,65 +118,76 @@ export default function BrowserBar({ webViewRef }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* URL Input */}
-      <View style={styles.urlRow}>
-        <TextInput
-          value={inputUrl}
-          onChangeText={setInputUrl}
-          onSubmitEditing={() => navigate(inputUrl)}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          placeholder='Search or enter URL'
-          placeholderTextColor={COLORS.textDisabled}
-          style={styles.urlInput}
-          autoCapitalize='none'
-          autoCorrect={false}
-          keyboardType='url'
-          returnKeyType='go'
-          selectTextOnFocus
+      <TouchableOpacity
+        onPress={handleBack}
+        disabled={!tab.canGoBack}
+        style={styles.navButton}
+      >
+        <Ionicons
+          name='chevron-back'
+          size={20}
+          color={tab.canGoBack ? COLORS.text : COLORS.textDisabled}
         />
-      </View>
+      </TouchableOpacity>
 
-      {/* Navigation Buttons */}
-      <View style={styles.navRow}>
+      <TouchableOpacity
+        onPress={handleForward}
+        disabled={!tab.canGoForward}
+        style={styles.navButton}
+      >
+        <Ionicons
+          name='chevron-forward'
+          size={20}
+          color={tab.canGoForward ? COLORS.text : COLORS.textDisabled}
+        />
+      </TouchableOpacity>
+
+      <TextInput
+        value={inputUrl}
+        onChangeText={setInputUrl}
+        onSubmitEditing={() => navigate(inputUrl)}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        placeholder='Search or enter URL'
+        placeholderTextColor={COLORS.textDisabled}
+        style={styles.urlInput}
+        autoCapitalize='none'
+        autoCorrect={false}
+        keyboardType='url'
+        returnKeyType='go'
+        selectTextOnFocus
+      />
+
+      {isOnPage && (
         <TouchableOpacity
-          onPress={handleBack}
-          disabled={!tab.canGoBack}
+          onPress={handleToggleFavorite}
           style={styles.navButton}
         >
           <Ionicons
-            name='chevron-back'
-            size={22}
-            color={tab.canGoBack ? COLORS.text : COLORS.textDisabled}
+            name={favorited ? 'star' : 'star-outline'}
+            size={18}
+            color={favorited ? COLORS.warning : COLORS.text}
           />
         </TouchableOpacity>
+      )}
 
-        <TouchableOpacity
-          onPress={handleForward}
-          disabled={!tab.canGoForward}
-          style={styles.navButton}
-        >
-          <Ionicons
-            name='chevron-forward'
-            size={22}
-            color={tab.canGoForward ? COLORS.text : COLORS.textDisabled}
-          />
-        </TouchableOpacity>
+      <TouchableOpacity onPress={handleReload} style={styles.navButton}>
+        <Ionicons name='refresh' size={18} color={COLORS.text} />
+      </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleReload} style={styles.navButton}>
-          <Ionicons name='refresh' size={20} color={COLORS.text} />
-        </TouchableOpacity>
+      <TouchableOpacity onPress={handleHome} style={styles.navButton}>
+        <Ionicons name='home-outline' size={18} color={COLORS.text} />
+      </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleHome} style={styles.navButton}>
-          <Ionicons name='home-outline' size={20} color={COLORS.text} />
-        </TouchableOpacity>
+      <TouchableOpacity onPress={handleTabsPress} style={styles.navButton}>
+        <View style={styles.tabsBadge}>
+          <Text style={styles.tabsCount}>{tabs.length}</Text>
+        </View>
+      </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleTabsPress} style={styles.tabsButton}>
-          <View style={styles.tabsBadge}>
-            <Text style={styles.tabsCount}>{tabs.length}</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity onPress={handleSettingsPress} style={styles.navButton}>
+        <Ionicons name='settings-outline' size={18} color={COLORS.text} />
+      </TouchableOpacity>
     </View>
   )
 }
@@ -156,50 +195,39 @@ export default function BrowserBar({ webViewRef }: Props) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: COLORS.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    paddingBottom: SPACING.xs,
-  },
-  urlRow: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    gap: SPACING.xs,
   },
   urlInput: {
     flex: 1,
     backgroundColor: COLORS.inputBg,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     color: COLORS.text,
     fontSize: FONT_SIZES.md,
   },
-  navRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
   navButton: {
-    padding: SPACING.sm,
-  },
-  tabsButton: {
-    padding: SPACING.sm,
+    padding: SPACING.xs,
   },
   tabsBadge: {
     borderWidth: 1.5,
     borderColor: COLORS.text,
     borderRadius: 4,
-    minWidth: 22,
-    height: 22,
+    minWidth: 18,
+    height: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: SPACING.xs,
   },
   tabsCount: {
     color: COLORS.text,
-    fontSize: FONT_SIZES.sm,
+    fontSize: 10,
     fontWeight: '700',
   },
 })

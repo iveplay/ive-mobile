@@ -7,7 +7,6 @@ import type {
 } from 'react-native-webview'
 import { useTabStore } from '@/store/useTabStore'
 import { useVideoStore } from '@/store/useVideoStore'
-import { INJECTED_SCRIPT } from '@/utils/injectedScripts'
 import { handleWebViewMessage } from '@/utils/messageHandler'
 
 interface Props {
@@ -17,6 +16,7 @@ interface Props {
 
 const WebViewContainer = forwardRef<WebView, Props>(({ tabId, url }, ref) => {
   const updateTab = useTabStore((s) => s.updateTab)
+  const addTab = useTabStore((s) => s.addTab)
   const resetVideo = useVideoStore((s) => s.reset)
 
   // Track the URL the WebView is actually showing to avoid
@@ -56,17 +56,26 @@ const WebViewContainer = forwardRef<WebView, Props>(({ tabId, url }, ref) => {
     resetVideo()
   }, [resetVideo])
 
+  const onOpenWindow = useCallback(
+    (event: { nativeEvent: { targetUrl: string } }) => {
+      addTab(event.nativeEvent.targetUrl)
+    },
+    [addTab],
+  )
+
   return (
     <WebView
       ref={ref}
       source={{ uri: url }}
       style={styles.webview}
-      injectedJavaScript={INJECTED_SCRIPT}
       onNavigationStateChange={onNavigationStateChange}
       onMessage={onMessage}
       onLoadStart={onLoadStart}
-      // Privacy
-      incognito
+      onOpenWindow={onOpenWindow}
+      // Privacy — WebView is sandboxed from system browser,
+      // so browsing never appears in Chrome/Safari history.
+      // Keep incognito off so login sessions persist within the app.
+      incognito={false}
       // Media
       javaScriptEnabled
       domStorageEnabled

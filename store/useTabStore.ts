@@ -1,12 +1,11 @@
 import { create } from 'zustand'
-import { DEFAULT_HOME_URL } from '@/constants/urls'
 import type { Tab } from '@/utils/types'
 
 let nextId = 1
 
 const createTab = (url?: string): Tab => ({
   id: String(nextId++),
-  url: url ?? DEFAULT_HOME_URL,
+  url: url ?? '',
   title: '',
   canGoBack: false,
   canGoForward: false,

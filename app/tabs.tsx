@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { useCallback } from 'react'
+import { useCallback, useRef, useMemo } from 'react'
 import {
   View,
   FlatList,
@@ -16,11 +16,17 @@ import type { Tab } from '@/utils/types'
 
 export default function TabsScreen() {
   const router = useRouter()
+  const listRef = useRef<FlatList>(null)
   const tabs = useTabStore((s) => s.tabs)
   const currentTabId = useTabStore((s) => s.currentTabId)
   const switchTab = useTabStore((s) => s.switchTab)
   const removeTab = useTabStore((s) => s.removeTab)
   const addTab = useTabStore((s) => s.addTab)
+
+  const activeIndex = useMemo(
+    () => tabs.findIndex((t) => t.id === currentTabId),
+    [tabs, currentTabId],
+  )
 
   const handleTabPress = useCallback(
     (id: string) => {
@@ -42,47 +48,59 @@ export default function TabsScreen() {
     router.back()
   }, [addTab, router])
 
-  const handleDone = useCallback(() => {
-    router.back()
-  }, [router])
-
   const renderTab = useCallback(
-    ({ item }: { item: Tab }) => (
-      <TabCard
-        tab={item}
-        isActive={item.id === currentTabId}
-        onPress={() => handleTabPress(item.id)}
-        onClose={() => handleTabClose(item.id)}
-      />
-    ),
+    ({ item }: { item: Tab }) => {
+      return (
+        <TabCard
+          tab={item}
+          isActive={item.id === currentTabId}
+          onPress={() => handleTabPress(item.id)}
+          onClose={() => handleTabClose(item.id)}
+        />
+      )
+    },
     [currentTabId, handleTabPress, handleTabClose],
   )
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Tabs</Text>
-        <TouchableOpacity onPress={handleDone} style={styles.doneButton}>
-          <Text style={styles.doneText}>Done</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.navButton}
+        >
+          <Ionicons name='chevron-back' size={20} color={COLORS.text} />
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>
+          {tabs.length} {tabs.length === 1 ? 'Tab' : 'Tabs'}
+        </Text>
+
+        <TouchableOpacity onPress={handleNewTab} style={styles.navButton}>
+          <Ionicons name='add' size={20} color={COLORS.text} />
         </TouchableOpacity>
       </View>
 
-      {/* Tab List */}
       <FlatList
+        ref={listRef}
         data={tabs}
         keyExtractor={(tab) => tab.id}
         renderItem={renderTab}
         contentContainerStyle={styles.list}
+        onLayout={() => {
+          listRef.current?.scrollToIndex({
+            index: activeIndex,
+            animated: false,
+            viewPosition: 0.3,
+          })
+        }}
+        onScrollToIndexFailed={(info) => {
+          listRef.current?.scrollToOffset({
+            offset: info.averageItemLength * info.index,
+            animated: false,
+          })
+        }}
       />
-
-      {/* Bottom Actions */}
-      <View style={styles.actions}>
-        <TouchableOpacity onPress={handleNewTab} style={styles.actionButton}>
-          <Ionicons name='add' size={20} color={COLORS.text} />
-          <Text style={styles.actionText}>New Tab</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   )
 }
@@ -93,47 +111,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
-  },
-  title: {
-    color: COLORS.text,
-    fontSize: FONT_SIZES.xl,
-    fontWeight: '700',
-  },
-  doneButton: {
-    padding: SPACING.sm,
-  },
-  doneText: {
-    color: COLORS.brand,
-    fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
-  },
-  list: {
-    padding: SPACING.lg,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    paddingVertical: SPACING.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    padding: SPACING.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
   },
-  actionText: {
+  headerTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZES.md,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  navButton: {
+    padding: SPACING.xs,
+  },
+  list: {
+    padding: SPACING.md,
   },
 })
