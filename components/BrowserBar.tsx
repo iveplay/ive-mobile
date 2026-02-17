@@ -16,10 +16,10 @@ import { buildSearchUrl, useSettingsStore } from '@/store/useSettingsStore'
 import { useCurrentTab, useTabStore } from '@/store/useTabStore'
 
 interface Props {
-  webViewRef: React.RefObject<WebView | null>
+  webViewRefs: React.RefObject<Map<string, WebView>>
 }
 
-export default function BrowserBar({ webViewRef }: Props) {
+export default function BrowserBar({ webViewRefs }: Props) {
   const router = useRouter()
   const tab = useCurrentTab()
   const tabs = useTabStore((s) => s.tabs)
@@ -69,12 +69,12 @@ export default function BrowserBar({ webViewRef }: Props) {
   )
 
   const handleBack = useCallback(() => {
-    webViewRef.current?.goBack()
-  }, [webViewRef])
+    webViewRefs.current?.get(tab.id)?.goBack()
+  }, [webViewRefs, tab.id])
 
   const handleForward = useCallback(() => {
-    webViewRef.current?.goForward()
-  }, [webViewRef])
+    webViewRefs.current?.get(tab.id)?.goForward()
+  }, [webViewRefs, tab.id])
 
   const handleHome = useCallback(() => {
     updateTab(tab.id, {
@@ -96,8 +96,8 @@ export default function BrowserBar({ webViewRef }: Props) {
   }, [tab.url, tab.title, favorited, addFavorite, removeFavorite])
 
   const handleReload = useCallback(() => {
-    webViewRef.current?.reload()
-  }, [webViewRef])
+    webViewRefs.current?.get(tab.id)?.reload()
+  }, [webViewRefs, tab.id])
 
   const handleTabsPress = useCallback(() => {
     router.push('/tabs')
