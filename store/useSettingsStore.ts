@@ -43,6 +43,7 @@ export const buildSearchUrl = (
 interface Settings {
   searchEngine: SearchEngine
   customSearchUrl: string
+  homepage: string
 }
 
 interface SettingsStore extends Settings {
@@ -50,6 +51,7 @@ interface SettingsStore extends Settings {
   load: () => Promise<void>
   setSearchEngine: (engine: SearchEngine) => void
   setCustomSearchUrl: (url: string) => void
+  setHomepage: (url: string) => void
 }
 
 const persist = (settings: Settings) => {
@@ -59,6 +61,7 @@ const persist = (settings: Settings) => {
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   searchEngine: 'google',
   customSearchUrl: '',
+  homepage: '',
   loaded: false,
 
   load: async () => {
@@ -77,11 +80,28 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setSearchEngine: (engine) => {
     set({ searchEngine: engine })
-    persist({ searchEngine: engine, customSearchUrl: get().customSearchUrl })
+    persist({
+      searchEngine: engine,
+      customSearchUrl: get().customSearchUrl,
+      homepage: get().homepage,
+    })
   },
 
   setCustomSearchUrl: (url) => {
     set({ customSearchUrl: url })
-    persist({ searchEngine: get().searchEngine, customSearchUrl: url })
+    persist({
+      searchEngine: get().searchEngine,
+      customSearchUrl: url,
+      homepage: get().homepage,
+    })
+  },
+
+  setHomepage: (url) => {
+    set({ homepage: url })
+    persist({
+      searchEngine: get().searchEngine,
+      customSearchUrl: get().customSearchUrl,
+      homepage: url,
+    })
   },
 }))

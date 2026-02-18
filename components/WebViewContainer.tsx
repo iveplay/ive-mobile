@@ -17,6 +17,7 @@ import { handleWebViewMessage } from '@/utils/messageHandler'
 interface Props {
   tabId: string
   url: string
+  reloadFlag: number
   isActive: boolean
   onWebViewRef?: (tabId: string, ref: WebView | null) => void
 }
@@ -25,13 +26,14 @@ interface Props {
 const initialInjectedJS = [trackAudioContextsJS].join('\n')
 
 const WebViewContainer = forwardRef<WebView, Props>(
-  ({ tabId, url, isActive, onWebViewRef }, ref) => {
+  ({ tabId, url, reloadFlag, isActive, onWebViewRef }, ref) => {
     const updateTab = useTabStore((s) => s.updateTab)
     const addTab = useTabStore((s) => s.addTab)
     const resetVideo = useVideoStore((s) => s.reset)
 
     const internalRef = useRef<WebView | null>(null)
     const wasActive = useRef(isActive)
+    const prevReloadFlag = useRef(reloadFlag)
 
     // Track the URL the WebView is actually showing to avoid
     // re-navigating when onNavigationStateChange updates the store
@@ -61,6 +63,14 @@ const WebViewContainer = forwardRef<WebView, Props>(
         // source prop change will trigger navigation
       }
     }, [url])
+
+    // Reload when reloadFlag is bumped from outside (e.g. settings)
+    useEffect(() => {
+      if (reloadFlag > 0 && reloadFlag !== prevReloadFlag.current) {
+        prevReloadFlag.current = reloadFlag
+        internalRef.current?.reload()
+      }
+    }, [reloadFlag])
 
     // Pause all media when tab becomes inactive, resume audio contexts when active
     useEffect(() => {

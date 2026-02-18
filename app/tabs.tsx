@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import TabCard from '@/components/TabCard'
 import { COLORS, SPACING, FONT_SIZES } from '@/constants/theme'
+import { useSettingsStore } from '@/store/useSettingsStore'
 import { useTabStore } from '@/store/useTabStore'
 import type { Tab } from '@/utils/types'
 
@@ -22,6 +23,9 @@ export default function TabsScreen() {
   const switchTab = useTabStore((s) => s.switchTab)
   const removeTab = useTabStore((s) => s.removeTab)
   const addTab = useTabStore((s) => s.addTab)
+  const updateTab = useTabStore((s) => s.updateTab)
+  const reloadCurrentTab = useTabStore((s) => s.reloadCurrentTab)
+  const homepage = useSettingsStore((s) => s.homepage)
 
   const activeIndex = useMemo(
     () => tabs.findIndex((t) => t.id === currentTabId),
@@ -38,15 +42,35 @@ export default function TabsScreen() {
 
   const handleTabClose = useCallback(
     (id: string) => {
-      removeTab(id)
+      if (tabs.length <= 1) {
+        updateTab(id, {
+          url: '',
+          title: '',
+          canGoBack: false,
+          canGoForward: false,
+        })
+        router.back()
+      } else {
+        removeTab(id)
+      }
     },
-    [removeTab],
+    [tabs.length, removeTab, updateTab, router],
   )
 
   const handleNewTab = useCallback(() => {
     addTab()
     router.back()
   }, [addTab, router])
+
+  const handleHome = useCallback(() => {
+    addTab(homepage || undefined)
+    router.back()
+  }, [addTab, homepage, router])
+
+  const handleReload = useCallback(() => {
+    reloadCurrentTab()
+    router.back()
+  }, [reloadCurrentTab, router])
 
   const renderTab = useCallback(
     ({ item }: { item: Tab }) => {
@@ -69,16 +93,24 @@ export default function TabsScreen() {
           onPress={() => router.back()}
           style={styles.navButton}
         >
-          <Ionicons name='chevron-back' size={20} color={COLORS.text} />
+          <Ionicons name='chevron-back' size={22} color={COLORS.text} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>
           {tabs.length} {tabs.length === 1 ? 'Tab' : 'Tabs'}
         </Text>
 
-        <TouchableOpacity onPress={handleNewTab} style={styles.navButton}>
-          <Ionicons name='add' size={20} color={COLORS.text} />
-        </TouchableOpacity>
+        <View style={styles.rightButtons}>
+          <TouchableOpacity onPress={handleReload} style={styles.navButton}>
+            <Ionicons name='refresh' size={20} color={COLORS.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleHome} style={styles.navButton}>
+            <Ionicons name='home-outline' size={20} color={COLORS.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleNewTab} style={styles.navButton}>
+            <Ionicons name='add' size={20} color={COLORS.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -111,22 +143,28 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
+    height: 56,
     backgroundColor: COLORS.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
   },
   headerTitle: {
+    flex: 1,
     color: COLORS.text,
     fontSize: FONT_SIZES.md,
     fontWeight: '600',
+    textAlign: 'center',
   },
   navButton: {
-    padding: SPACING.xs,
+    padding: SPACING.sm,
+  },
+  rightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
   list: {
     padding: SPACING.md,

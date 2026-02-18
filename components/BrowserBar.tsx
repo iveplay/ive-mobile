@@ -76,16 +76,6 @@ export default function BrowserBar({ webViewRefs }: Props) {
     webViewRefs.current?.get(tab.id)?.goForward()
   }, [webViewRefs, tab.id])
 
-  const handleHome = useCallback(() => {
-    updateTab(tab.id, {
-      url: '',
-      title: '',
-      canGoBack: false,
-      canGoForward: false,
-    })
-    setInputUrl('')
-  }, [tab.id, updateTab])
-
   const handleToggleFavorite = useCallback(() => {
     if (!tab.url) return
     if (favorited) {
@@ -94,10 +84,6 @@ export default function BrowserBar({ webViewRefs }: Props) {
       addFavorite(tab.url, tab.title || tab.url)
     }
   }, [tab.url, tab.title, favorited, addFavorite, removeFavorite])
-
-  const handleReload = useCallback(() => {
-    webViewRefs.current?.get(tab.id)?.reload()
-  }, [webViewRefs, tab.id])
 
   const handleTabsPress = useCallback(() => {
     router.push('/tabs')
@@ -121,7 +107,7 @@ export default function BrowserBar({ webViewRefs }: Props) {
       <TouchableOpacity
         onPress={handleBack}
         disabled={!tab.canGoBack}
-        style={styles.navButton}
+        style={styles.pageNavButton}
       >
         <Ionicons
           name='chevron-back'
@@ -133,7 +119,7 @@ export default function BrowserBar({ webViewRefs }: Props) {
       <TouchableOpacity
         onPress={handleForward}
         disabled={!tab.canGoForward}
-        style={styles.navButton}
+        style={styles.pageNavButton}
       >
         <Ionicons
           name='chevron-forward'
@@ -142,21 +128,23 @@ export default function BrowserBar({ webViewRefs }: Props) {
         />
       </TouchableOpacity>
 
-      <TextInput
-        value={inputUrl}
-        onChangeText={setInputUrl}
-        onSubmitEditing={() => navigate(inputUrl)}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        placeholder='Search or enter URL'
-        placeholderTextColor={COLORS.textDisabled}
-        style={styles.urlInput}
-        autoCapitalize='none'
-        autoCorrect={false}
-        keyboardType='url'
-        returnKeyType='go'
-        selectTextOnFocus
-      />
+      <View style={styles.urlInputWrapper}>
+        <TextInput
+          value={inputUrl}
+          onChangeText={setInputUrl}
+          onSubmitEditing={() => navigate(inputUrl)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder='Search or enter URL'
+          placeholderTextColor={COLORS.textDisabled}
+          style={styles.urlInput}
+          autoCapitalize='none'
+          autoCorrect={false}
+          keyboardType='url'
+          returnKeyType='go'
+          selectTextOnFocus
+        />
+      </View>
 
       {isOnPage && (
         <TouchableOpacity
@@ -165,19 +153,11 @@ export default function BrowserBar({ webViewRefs }: Props) {
         >
           <Ionicons
             name={favorited ? 'star' : 'star-outline'}
-            size={18}
+            size={20}
             color={favorited ? COLORS.warning : COLORS.text}
           />
         </TouchableOpacity>
       )}
-
-      <TouchableOpacity onPress={handleReload} style={styles.navButton}>
-        <Ionicons name='refresh' size={18} color={COLORS.text} />
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={handleHome} style={styles.navButton}>
-        <Ionicons name='home-outline' size={18} color={COLORS.text} />
-      </TouchableOpacity>
 
       <TouchableOpacity onPress={handleTabsPress} style={styles.navButton}>
         <View style={styles.tabsBadge}>
@@ -186,7 +166,7 @@ export default function BrowserBar({ webViewRefs }: Props) {
       </TouchableOpacity>
 
       <TouchableOpacity onPress={handleSettingsPress} style={styles.navButton}>
-        <Ionicons name='settings-outline' size={18} color={COLORS.text} />
+        <Ionicons name='ellipsis-vertical' size={20} color={COLORS.text} />
       </TouchableOpacity>
     </View>
   )
@@ -194,33 +174,40 @@ export default function BrowserBar({ webViewRefs }: Props) {
 
 const styles = StyleSheet.create({
   container: {
+    height: 56,
     backgroundColor: COLORS.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    gap: SPACING.xs,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
   },
-  urlInput: {
+  urlInputWrapper: {
     flex: 1,
     backgroundColor: COLORS.inputBg,
-    borderRadius: 8,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    borderRadius: 10,
+    paddingHorizontal: SPACING.sm,
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+  },
+  urlInput: {
     color: COLORS.text,
     fontSize: FONT_SIZES.md,
+    padding: 0,
+  },
+  pageNavButton: {
+    padding: SPACING.sm,
+    width: 32,
   },
   navButton: {
-    padding: SPACING.xs,
+    padding: SPACING.sm,
   },
   tabsBadge: {
     borderWidth: 1.5,
     borderColor: COLORS.text,
     borderRadius: 4,
-    minWidth: 18,
-    height: 18,
+    minWidth: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: SPACING.xs,

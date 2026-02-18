@@ -161,6 +161,13 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     color: COLORS.textSecondary,
   },
+  homepageLink: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.brand,
+    textDecorationLine: 'underline',
+    maxWidth: 280,
+    textAlign: 'center',
+  },
   searchInput: {
     width: '100%',
     backgroundColor: COLORS.inputBg,

@@ -78,6 +78,7 @@ export default function BrowserScreen() {
               <WebViewContainer
                 tabId={t.id}
                 url={t.url}
+                reloadFlag={t.reloadFlag}
                 isActive={isActive}
                 onWebViewRef={handleWebViewRef}
               />

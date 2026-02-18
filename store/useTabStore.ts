@@ -9,6 +9,7 @@ const createTab = (url?: string): Tab => ({
   title: '',
   canGoBack: false,
   canGoForward: false,
+  reloadFlag: 0,
 })
 
 interface TabStore {
@@ -19,6 +20,7 @@ interface TabStore {
   removeTab: (id: string) => void
   switchTab: (id: string) => void
   updateTab: (id: string, data: Partial<Omit<Tab, 'id'>>) => void
+  reloadCurrentTab: () => void
 }
 
 export const useTabStore = create<TabStore>((set, get) => {
@@ -60,6 +62,17 @@ export const useTabStore = create<TabStore>((set, get) => {
     updateTab: (id, data) => {
       set((state) => ({
         tabs: state.tabs.map((t) => (t.id === id ? { ...t, ...data } : t)),
+      }))
+    },
+
+    reloadCurrentTab: () => {
+      const { currentTabId, tabs } = get()
+      const tab = tabs.find((t) => t.id === currentTabId)
+      if (!tab) return
+      set((state) => ({
+        tabs: state.tabs.map((t) =>
+          t.id === currentTabId ? { ...t, reloadFlag: t.reloadFlag + 1 } : t,
+        ),
       }))
     },
   }

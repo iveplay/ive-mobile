@@ -4,6 +4,7 @@ export interface Tab {
   title: string
   canGoBack: boolean
   canGoForward: boolean
+  reloadFlag: number
 }
 
 export type BridgeMessageType =
