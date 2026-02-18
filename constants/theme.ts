@@ -3,11 +3,11 @@ export const COLORS = {
   brandLight: '#9a0361',
   brandDark: '#5c0139',
 
-  background: '#0a0a0a',
-  surface: '#141414',
-  cardBg: '#1a1a1a',
-  inputBg: '#2a2a2a',
-  border: '#333333',
+  background: '#242424',
+  surface: '#2E2E2E',
+  cardBg: '#2E2E2E',
+  inputBg: '#3a3a3a',
+  border: '#7b024d',
 
   text: '#ffffff',
   textSecondary: '#a0a0a0',

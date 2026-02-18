@@ -36,16 +36,13 @@ export default function BrowserScreen() {
   // Always include the current tab
   aliveTabIds.add(currentTabId)
 
-  const handleWebViewRef = useCallback(
-    (tabId: string, ref: WebView | null) => {
-      if (ref) {
-        webViewRefs.current.set(tabId, ref)
-      } else {
-        webViewRefs.current.delete(tabId)
-      }
-    },
-    [],
-  )
+  const handleWebViewRef = useCallback((tabId: string, ref: WebView | null) => {
+    if (ref) {
+      webViewRefs.current.set(tabId, ref)
+    } else {
+      webViewRefs.current.delete(tabId)
+    }
+  }, [])
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>

@@ -128,7 +128,12 @@ export default function BrowserBar({ webViewRefs }: Props) {
         />
       </TouchableOpacity>
 
-      <View style={styles.urlInputWrapper}>
+      <View
+        style={[
+          styles.urlInputWrapper,
+          isFocused && styles.urlInputWrapperFocused,
+        ]}
+      >
         <TextInput
           value={inputUrl}
           onChangeText={setInputUrl}
@@ -189,6 +194,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm,
     justifyContent: 'center',
     alignSelf: 'stretch',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  urlInputWrapperFocused: {
+    borderColor: COLORS.border,
   },
   urlInput: {
     color: COLORS.text,

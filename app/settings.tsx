@@ -36,12 +36,16 @@ export default function SettingsScreen() {
 
   const [customInput, setCustomInput] = useState(customSearchUrl)
   const [homepageInput, setHomepageInput] = useState(homepage)
+  const [homepageFocused, setHomepageFocused] = useState(false)
+  const [customFocused, setCustomFocused] = useState(false)
 
   const handleCustomBlur = () => {
+    setCustomFocused(false)
     setCustomSearchUrl(customInput.trim())
   }
 
   const handleHomepageBlur = () => {
+    setHomepageFocused(false)
     setHomepage(homepageInput.trim())
   }
 
@@ -69,11 +73,15 @@ export default function SettingsScreen() {
           <TextInput
             value={homepageInput}
             onChangeText={setHomepageInput}
+            onFocus={() => setHomepageFocused(true)}
             onBlur={handleHomepageBlur}
             onSubmitEditing={handleHomepageBlur}
             placeholder='https://example.com'
             placeholderTextColor={COLORS.textDisabled}
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              homepageFocused && styles.textInputFocused,
+            ]}
             autoCapitalize='none'
             autoCorrect={false}
             keyboardType='url'
@@ -96,7 +104,6 @@ export default function SettingsScreen() {
                     styles.option,
                     isFirst && styles.optionFirst,
                     isLast && styles.optionLast,
-                    !isLast && styles.optionBorder,
                   ]}
                   onPress={() => setSearchEngine(key)}
                 >
@@ -122,11 +129,15 @@ export default function SettingsScreen() {
               <TextInput
                 value={customInput}
                 onChangeText={setCustomInput}
+                onFocus={() => setCustomFocused(true)}
                 onBlur={handleCustomBlur}
                 onSubmitEditing={handleCustomBlur}
                 placeholder='https://example.com/search?q=%s'
                 placeholderTextColor={COLORS.textDisabled}
-                style={styles.textInput}
+                style={[
+                  styles.textInput,
+                  customFocused && styles.textInputFocused,
+                ]}
                 autoCapitalize='none'
                 autoCorrect={false}
                 keyboardType='url'
@@ -200,10 +211,6 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
   },
-  optionBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
   optionText: {
     color: COLORS.text,
     fontSize: FONT_SIZES.md,
@@ -225,6 +232,11 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     color: COLORS.text,
     fontSize: FONT_SIZES.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  textInputFocused: {
+    borderColor: COLORS.border,
   },
   hint: {
     color: COLORS.textDisabled,

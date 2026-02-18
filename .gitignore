@@ -43,4 +43,6 @@ app-example
 /android
 
 /adblocker-master
-.apk
+*.apk
+*.gz
+*.app

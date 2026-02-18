@@ -20,6 +20,7 @@ interface Props {
 
 export default function NewTabPage({ onNavigate }: Props) {
   const [query, setQuery] = useState('')
+  const [isFocused, setIsFocused] = useState(false)
   const favorites = useFavoriteStore((s) => s.favorites)
   const removeFavorite = useFavoriteStore((s) => s.removeFavorite)
   const searchEngine = useSettingsStore((s) => s.searchEngine)
@@ -73,9 +74,11 @@ export default function NewTabPage({ onNavigate }: Props) {
         value={query}
         onChangeText={setQuery}
         onSubmitEditing={handleSubmit}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         placeholder='Search or enter URL'
         placeholderTextColor={COLORS.textDisabled}
-        style={styles.searchInput}
+        style={[styles.searchInput, isFocused && styles.searchInputFocused]}
         autoCapitalize='none'
         autoCorrect={false}
         keyboardType='url'
@@ -176,6 +179,11 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     color: COLORS.text,
     fontSize: FONT_SIZES.lg,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  searchInputFocused: {
+    borderColor: COLORS.border,
   },
   card: {
     width: '100%',
