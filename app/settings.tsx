@@ -79,7 +79,7 @@ export default function SettingsScreen() {
             keyboardType='url'
             returnKeyType='done'
           />
-          <Text style={styles.hint}>Shown in the new tab page</Text>
+          <Text style={styles.hint}>Shown in the tab view page</Text>
         </View>
 
         <View style={styles.section}>
