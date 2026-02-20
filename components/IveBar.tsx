@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native'
 import { COLORS, FONT_SIZES, SPACING } from '@/constants/theme'
+import { useDeviceStore } from '@/store/useDeviceStore'
 import { useVideoStore } from '@/store/useVideoStore'
 
 function formatTime(ms: number): string {
@@ -18,6 +19,9 @@ export default function IveBar() {
   const durationMs = useVideoStore((s) => s.durationMs)
   const playbackRate = useVideoStore((s) => s.playbackRate)
   const isBuffering = useVideoStore((s) => s.isBuffering)
+
+  const handyConnected = useDeviceStore((s) => s.handyConnected)
+  const scriptLoaded = useDeviceStore((s) => s.scriptLoaded)
 
   if (!hasVideo) return null
 
@@ -44,6 +48,19 @@ export default function IveBar() {
           {formatTime(currentTimeMs)} / {formatTime(durationMs)}
         </Text>
         {playbackRate !== 1 && <Text style={styles.rate}>{playbackRate}x</Text>}
+        <View style={styles.deviceStatus}>
+          <View
+            style={[
+              styles.deviceDot,
+              handyConnected
+                ? styles.deviceConnected
+                : styles.deviceDisconnected,
+            ]}
+          />
+          <Text style={styles.deviceText}>
+            {handyConnected ? (scriptLoaded ? 'Synced' : 'No script') : 'Handy'}
+          </Text>
+        </View>
       </View>
     </View>
   )
@@ -101,5 +118,25 @@ const styles = StyleSheet.create({
     color: COLORS.brandLight,
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
+  },
+  deviceStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  deviceDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  deviceConnected: {
+    backgroundColor: COLORS.success,
+  },
+  deviceDisconnected: {
+    backgroundColor: COLORS.textDisabled,
+  },
+  deviceText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZES.sm,
   },
 })

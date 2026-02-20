@@ -8,6 +8,7 @@ import NewTabPage from '@/components/NewTabPage'
 import WebViewContainer from '@/components/WebViewContainer'
 import { MAX_ALIVE_TABS } from '@/constants/browser'
 import { COLORS } from '@/constants/theme'
+import { usePlaybackSync } from '@/hooks/usePlaybackSync'
 import { useTabStore, useCurrentTab } from '@/store/useTabStore'
 import { useVideoStore } from '@/store/useVideoStore'
 
@@ -19,6 +20,9 @@ export default function BrowserScreen() {
 
   const currentTab = useCurrentTab()
   const resetVideo = useVideoStore((s) => s.reset)
+
+  // Bridge video playback → Handy device
+  usePlaybackSync()
 
   // Reset video state when switching tabs
   useEffect(() => {

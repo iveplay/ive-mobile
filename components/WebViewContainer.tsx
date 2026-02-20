@@ -86,14 +86,15 @@ const WebViewContainer = forwardRef<WebView, Props>(
         onOpenWindow={onOpenWindow}
         onMessage={handleWebViewMessage}
         injectedJavaScript={INJECTED_VIDEO_DETECTION_JS}
+        mediaPlaybackRequiresUserAction={false}
         javaScriptEnabled
         domStorageEnabled
-        allowsInlineMediaPlayback
-        mediaPlaybackRequiresUserAction={false}
         androidLayerType='hardware'
+        allowsInlineMediaPlayback
         allowsBackForwardNavigationGestures
         allowsPictureInPictureMediaPlayback
         allowsAirPlayForMediaPlayback
+        allowsFullscreenVideo
       />
     )
   },

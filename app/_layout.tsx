@@ -1,20 +1,24 @@
+import '@/utils/event-source-polyfill'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { setBackgroundColorAsync } from 'expo-system-ui'
 import { useEffect } from 'react'
 import { COLORS } from '@/constants/theme'
+import { useDeviceStore } from '@/store/useDeviceStore'
 import { useFavoriteStore } from '@/store/useFavoriteStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
 
 export default function RootLayout() {
+  const loadDevice = useDeviceStore((s) => s.load)
   const loadFavorites = useFavoriteStore((s) => s.load)
   const loadSettings = useSettingsStore((s) => s.load)
 
   useEffect(() => {
+    loadDevice()
     loadFavorites()
     loadSettings()
     setBackgroundColorAsync(COLORS.background)
-  }, [loadFavorites, loadSettings])
+  }, [loadDevice, loadFavorites, loadSettings])
 
   return (
     <>
