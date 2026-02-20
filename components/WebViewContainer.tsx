@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useRef, useEffect, useMemo } from 'react'
 import { WebView } from 'react-native-webview'
 import type { WebViewNavigation } from 'react-native-webview'
 import { useTabStore } from '@/store/useTabStore'
-import { INJECTED_VIDEO_DETECTION_JS } from '@/utils/injected-js'
+import { INJECTED_JS } from '@/utils/injected'
 import { createMessageHandler } from '@/utils/message-handler'
 
 interface Props {
@@ -88,7 +88,7 @@ const WebViewContainer = forwardRef<WebView, Props>(
         onNavigationStateChange={onNavigationStateChange}
         onOpenWindow={onOpenWindow}
         onMessage={handleMessage}
-        injectedJavaScript={INJECTED_VIDEO_DETECTION_JS}
+        injectedJavaScript={INJECTED_JS}
         mediaPlaybackRequiresUserAction={false}
         javaScriptEnabled
         domStorageEnabled

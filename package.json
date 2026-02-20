@@ -22,7 +22,7 @@
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "expo-system-ui": "~6.0.9",
-    "ive-connect": "1.1.0",
+    "ive-connect": "file:../ive-connect/ive-connect-1.1.0.tgz",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-safe-area-context": "^5.6.2",

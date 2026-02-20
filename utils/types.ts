@@ -17,6 +17,7 @@ export interface IveWebViewMessage {
 export type IveMessageType =
   | 'video:found'
   | 'video:lost'
+  | 'video:available'
   | 'video:play'
   | 'video:pause'
   | 'video:seeking'

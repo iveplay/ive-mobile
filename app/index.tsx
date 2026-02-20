@@ -1,3 +1,4 @@
+import { useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef } from 'react'
 import { BackHandler, View, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -20,14 +21,46 @@ export default function BrowserScreen() {
 
   const currentTab = useCurrentTab()
   const resetVideo = useVideoStore((s) => s.reset)
+  const pauseVideo = useVideoStore((s) => s.pause)
 
   // Bridge video playback → Handy device
   usePlaybackSync()
 
-  // Reset video state when switching tabs
+  // Track previous tab to pause its video when switching
+  const prevTabId = useRef(currentTabId)
   useEffect(() => {
-    resetVideo()
+    if (prevTabId.current !== currentTabId) {
+      // Pause the video in the old tab's WebView (keeps selection)
+      const oldRef = webViewRefs.current.get(prevTabId.current)
+      oldRef?.injectJavaScript(
+        'if (window.__ive_pause_video) window.__ive_pause_video(); true;',
+      )
+      // Reset RN-side video state for the new tab
+      resetVideo()
+      prevTabId.current = currentTabId
+    }
   }, [currentTabId, resetVideo])
+
+  // Pause video when leaving this screen (settings, tab manager)
+  // Resume when coming back
+  useFocusEffect(
+    useCallback(() => {
+      // Screen focused — resume if we have a synced video
+      const ref = webViewRefs.current.get(currentTabId)
+      ref?.injectJavaScript(
+        'if (window.__ive_resume_video) window.__ive_resume_video(); true;',
+      )
+
+      return () => {
+        // Screen blurred — pause the video, keep connection alive
+        const ref = webViewRefs.current.get(currentTabId)
+        ref?.injectJavaScript(
+          'if (window.__ive_pause_video) window.__ive_pause_video(); true;',
+        )
+        pauseVideo()
+      }
+    }, [currentTabId, pauseVideo]),
+  )
 
   // Track recently-used tab order for eviction (most recent first)
   const recentOrder = useRef<string[]>([currentTabId])
@@ -71,6 +104,14 @@ export default function BrowserScreen() {
     }
   }, [])
 
+  // Deselect current video — tells injected JS to re-show sync overlays
+  const handleDeselectVideo = useCallback(() => {
+    const ref = webViewRefs.current.get(currentTabId)
+    ref?.injectJavaScript(
+      'if (window.__ive_deselect_video) window.__ive_deselect_video(); true;',
+    )
+  }, [currentTabId])
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <BrowserBar webViewRefs={webViewRefs} />
@@ -109,7 +150,7 @@ export default function BrowserScreen() {
           )
         })}
       </View>
-      <IveBar />
+      <IveBar onDeselectVideo={handleDeselectVideo} />
     </SafeAreaView>
   )
 }

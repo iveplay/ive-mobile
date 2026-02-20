@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { COLORS, FONT_SIZES, SPACING } from '@/constants/theme'
 import { useDeviceStore } from '@/store/useDeviceStore'
 import { useVideoStore } from '@/store/useVideoStore'
@@ -12,7 +13,12 @@ function formatTime(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
 }
 
-export default function IveBar() {
+interface IveBarProps {
+  onDeselectVideo?: () => void
+}
+
+export default function IveBar({ onDeselectVideo }: IveBarProps) {
+  const videosAvailable = useVideoStore((s) => s.videosAvailable)
   const hasVideo = useVideoStore((s) => s.hasVideo)
   const isPlaying = useVideoStore((s) => s.isPlaying)
   const currentTimeMs = useVideoStore((s) => s.currentTimeMs)
@@ -23,8 +29,24 @@ export default function IveBar() {
   const handyConnected = useDeviceStore((s) => s.handyConnected)
   const scriptLoaded = useDeviceStore((s) => s.scriptLoaded)
 
+  // Videos detected but user hasn't selected one yet
+  if (videosAvailable && !hasVideo) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.hintRow}>
+          <Ionicons name='videocam-outline' size={16} color={COLORS.brand} />
+          <Text style={styles.hintText}>
+            Tap the IVE button on a video to start
+          </Text>
+        </View>
+      </View>
+    )
+  }
+
+  // No videos at all
   if (!hasVideo) return null
 
+  // Video synced — full playback bar
   const progress = durationMs > 0 ? currentTimeMs / durationMs : 0
 
   return (
@@ -65,6 +87,15 @@ export default function IveBar() {
               : 'Not connected'}
           </Text>
         </View>
+        {onDeselectVideo && (
+          <TouchableOpacity
+            onPress={onDeselectVideo}
+            style={styles.changeBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name='swap-horizontal' size={16} color={COLORS.brand} />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   )
@@ -75,6 +106,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.brand,
+  },
+  hintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  hintText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZES.sm,
   },
   progressTrack: {
     height: 3,
@@ -142,5 +184,8 @@ const styles = StyleSheet.create({
   deviceText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZES.sm,
+  },
+  changeBtn: {
+    padding: SPACING.xs,
   },
 })
