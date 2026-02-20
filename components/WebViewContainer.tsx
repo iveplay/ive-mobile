@@ -1,38 +1,21 @@
 import { forwardRef, useCallback, useRef, useEffect } from 'react'
-import { StyleSheet } from 'react-native'
 import { WebView } from 'react-native-webview'
-import type {
-  WebViewNavigation,
-  WebViewMessageEvent,
-} from 'react-native-webview'
+import type { WebViewNavigation } from 'react-native-webview'
 import { useTabStore } from '@/store/useTabStore'
-import { useVideoStore } from '@/store/useVideoStore'
-import {
-  pauseAllMediaJS,
-  resumeAudioContextsJS,
-  trackAudioContextsJS,
-} from '@/utils/injected-scripts'
-import { handleWebViewMessage } from '@/utils/messageHandler'
 
 interface Props {
   tabId: string
   url: string
   reloadFlag: number
-  isActive: boolean
   onWebViewRef?: (tabId: string, ref: WebView | null) => void
 }
 
-// Combine all scripts that run on page load
-const initialInjectedJS = [trackAudioContextsJS].join('\n')
-
 const WebViewContainer = forwardRef<WebView, Props>(
-  ({ tabId, url, reloadFlag, isActive, onWebViewRef }, ref) => {
+  ({ tabId, url, reloadFlag, onWebViewRef }, ref) => {
     const updateTab = useTabStore((s) => s.updateTab)
     const addTab = useTabStore((s) => s.addTab)
-    const resetVideo = useVideoStore((s) => s.reset)
 
     const internalRef = useRef<WebView | null>(null)
-    const wasActive = useRef(isActive)
     const prevReloadFlag = useRef(reloadFlag)
 
     // Track the URL the WebView is actually showing to avoid
@@ -72,17 +55,6 @@ const WebViewContainer = forwardRef<WebView, Props>(
       }
     }, [reloadFlag])
 
-    // Pause all media when tab becomes inactive, resume audio contexts when active
-    useEffect(() => {
-      if (wasActive.current && !isActive && internalRef.current) {
-        internalRef.current.injectJavaScript(pauseAllMediaJS)
-      }
-      if (!wasActive.current && isActive && internalRef.current) {
-        internalRef.current.injectJavaScript(resumeAudioContextsJS)
-      }
-      wasActive.current = isActive
-    }, [isActive])
-
     const onNavigationStateChange = useCallback(
       (nav: WebViewNavigation) => {
         currentWebViewUrl.current = nav.url
@@ -96,18 +68,6 @@ const WebViewContainer = forwardRef<WebView, Props>(
       [tabId, updateTab],
     )
 
-    const onMessage = useCallback(
-      (event: WebViewMessageEvent) => {
-        if (!isActive) return
-        handleWebViewMessage(event, { current: internalRef.current })
-      },
-      [isActive],
-    )
-
-    const onLoadStart = useCallback(() => {
-      if (isActive) resetVideo()
-    }, [isActive, resetVideo])
-
     const onOpenWindow = useCallback(
       (event: { nativeEvent: { targetUrl: string } }) => {
         addTab(event.nativeEvent.targetUrl)
@@ -119,13 +79,10 @@ const WebViewContainer = forwardRef<WebView, Props>(
       <WebView
         ref={setRef}
         source={{ uri: url }}
-        style={styles.webview}
+        style={{ flex: 1 }}
         onNavigationStateChange={onNavigationStateChange}
-        onMessage={onMessage}
-        onLoadStart={onLoadStart}
         onOpenWindow={onOpenWindow}
-        injectedJavaScript={initialInjectedJS}
-        incognito={false}
+        // injectedJavaScript={initialInjectedJS}
         javaScriptEnabled
         domStorageEnabled
         allowsInlineMediaPlayback
@@ -142,9 +99,3 @@ const WebViewContainer = forwardRef<WebView, Props>(
 WebViewContainer.displayName = 'WebViewContainer'
 
 export default WebViewContainer
-
-const styles = StyleSheet.create({
-  webview: {
-    flex: 1,
-  },
-})

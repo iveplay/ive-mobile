@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { View, StyleSheet } from 'react-native'
+import { BackHandler, View, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type WebView from 'react-native-webview'
 import BrowserBar from '@/components/BrowserBar'
@@ -7,13 +7,15 @@ import NewTabPage from '@/components/NewTabPage'
 import WebViewContainer from '@/components/WebViewContainer'
 import { MAX_ALIVE_TABS } from '@/constants/browser'
 import { COLORS } from '@/constants/theme'
-import { useTabStore } from '@/store/useTabStore'
+import { useTabStore, useCurrentTab } from '@/store/useTabStore'
 
 export default function BrowserScreen() {
   const webViewRefs = useRef<Map<string, WebView>>(new Map())
   const tabs = useTabStore((s) => s.tabs)
   const currentTabId = useTabStore((s) => s.currentTabId)
   const updateTab = useTabStore((s) => s.updateTab)
+
+  const currentTab = useCurrentTab()
 
   // Track recently-used tab order for eviction (most recent first)
   const recentOrder = useRef<string[]>([currentTabId])
@@ -30,6 +32,19 @@ export default function BrowserScreen() {
       if (!tabIds.has(id)) webViewRefs.current.delete(id)
     }
   }, [currentTabId, tabs])
+
+  // Intercept Android back button — go back in WebView history if possible
+  useEffect(() => {
+    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (currentTab?.canGoBack) {
+        const ref = webViewRefs.current.get(currentTabId)
+        ref?.goBack()
+        return true // prevent default (exit app)
+      }
+      return false // let system handle it (exit app)
+    })
+    return () => handler.remove()
+  }, [currentTab?.canGoBack, currentTabId])
 
   // Determine which tabs should stay alive (mounted)
   const aliveTabIds = new Set(recentOrder.current.slice(0, MAX_ALIVE_TABS))
@@ -76,7 +91,6 @@ export default function BrowserScreen() {
                 tabId={t.id}
                 url={t.url}
                 reloadFlag={t.reloadFlag}
-                isActive={isActive}
                 onWebViewRef={handleWebViewRef}
               />
             </View>

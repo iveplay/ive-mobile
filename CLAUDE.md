@@ -10,8 +10,9 @@ IVE Mobile is an Expo/React Native browser app — a WebView-based browser with 
 - **Router:** Expo Router 6 (file-based routing in `app/`)
 - **WebView:** react-native-webview 13
 - **State:** Zustand 5
+- **Persistence:** @react-native-async-storage/async-storage (favorites, settings)
 - **Icons:** @expo/vector-icons (Ionicons)
-- **Linting:** ESLint 9 (flat config) + Prettier
+- **Linting:** ESLint 9 (flat config, eslint-config-expo) + Prettier
 - **New Architecture:** enabled (`newArchEnabled`, React Compiler, typed routes)
 
 ## Commands
@@ -31,6 +32,7 @@ app/                    # Expo Router screens
   _layout.tsx           # Root layout (Stack, dark theme)
   index.tsx             # Main browser screen
   tabs.tsx              # Tab manager (modal)
+  settings.tsx          # Settings screen (search engine, homepage)
 components/             # PascalCase components
   BrowserBar.tsx        # Top bar: back/forward + URL input + reload + tabs (single row)
   NewTabPage.tsx        # Blank new-tab page with search input & shortcuts
@@ -38,50 +40,29 @@ components/             # PascalCase components
   WebViewContainer.tsx  # WebView with JS injection (forwardRef)
 store/                  # Zustand stores (camelCase files)
   useTabStore.ts        # Tab list, current tab, CRUD
-  useVideoStore.ts      # Detected video state
+  useFavoriteStore.ts   # URL favorites with AsyncStorage persistence
+  useSettingsStore.ts   # Search engine & homepage with AsyncStorage persistence
 utils/                  # Utilities (camelCase files)
-  injectedScripts.ts    # All injected JS as strings (~254 lines vanilla JS)
-  messageHandler.ts     # WebView onMessage handler
   types.ts              # Shared TypeScript interfaces
 constants/              # App constants (camelCase files)
+  browser.ts            # Browser constants (MAX_ALIVE_TABS)
   theme.ts              # Dark theme colors, spacing, font sizes
   urls.ts               # Allowed bridge origins
 ```
 
 ## Architecture
 
-### JS Injection Pipeline
+### Tab Memory Management
 
-1. WebView loads page → `injectedJavaScript` runs after DOM ready
-2. Prevents double-injection via `window.__ive_injected` flag
-3. Video detector finds `<video>` elements (>100px, prioritizes playing)
-4. MutationObserver watches for dynamically added videos
-5. Video event listeners forward play/pause/seek/etc. to RN (times in ms)
-6. IvePlay bridge intercepts iveplay.io postMessages and relays to RN
+- `MAX_ALIVE_TABS` (5) limits concurrent mounted WebViews
+- Tabs beyond the limit are unmounted but kept in state
+- Media contexts are paused/resumed when switching tabs
 
-### Communication Flow
+### Favorites & Settings
 
-```bash
-WebView (injected JS)
-  ──window.ReactNativeWebView.postMessage()──►  React Native (messageHandler.ts)
-  ◄──webViewRef.injectJavaScript()──             └── updates Zustand stores
-```
-
-### Message Types
-
-- `VIDEO_DETECTED` — video element found (includes width, height, src, duration, paused)
-- `VIDEO_NOT_FOUND` — no significant video after 5 retries (exponential backoff)
-- `VIDEO_EVENT` — play, pause, seeking, timeupdate, ratechange, volumechange, waiting, playing, durationchange
-- `IVEPLAY_BRIDGE` — forwarded postMessage from iveplay.io
-
-### Bridge Protocol
-
-On iveplay.io, the app responds to postMessages as if it were the browser extension:
-
-- Listens for `{ from: 'iveplay', id, type, ... }`
-- Responds with `{ from: 'ive-extension', id, data, error }`
-- Allowed origins: `iveplay.io`, `localhost` (HTTPS only)
-- Implements: `ive:ivedb:ping` (returns app version)
+- **Favorites:** URL bookmarks persisted to AsyncStorage (`ive-favorites`)
+- **Settings:** Search engine (Google, DuckDuckGo, Brave, Custom) and homepage URL persisted to AsyncStorage (`ive-settings`)
+- Custom search URLs use `%s` placeholder for query substitution
 
 ## Conventions
 
