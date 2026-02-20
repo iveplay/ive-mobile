@@ -1,6 +1,8 @@
 /**
- * JavaScript injected into the WebView to detect <video> elements
- * and forward playback events to React Native.
+ * JavaScript injected into the WebView for:
+ * 1. Video detection — finds <video> elements, forwards events to RN
+ * 2. Bridge relay — intercepts ive-play postMessage bridge calls,
+ *    forwards to RN, and receives responses back
  *
  * Uses plain ES5 for maximum WebView compatibility.
  * Ends with `true;` as required by react-native-webview.
@@ -9,6 +11,10 @@ export const INJECTED_VIDEO_DETECTION_JS = `
 (function() {
   if (window.__ive_injected) return;
   window.__ive_injected = true;
+
+  // ============================================
+  // 1. Video Detection
+  // ============================================
 
   var currentVideo = null;
   var listeners = [];
@@ -86,6 +92,42 @@ export const INJECTED_VIDEO_DETECTION_JS = `
   scanTimer = setInterval(scan, 3000);
 
   scan();
+
+  // ============================================
+  // 2. Bridge Relay (ive-play <-> RN)
+  // ============================================
+
+  // Allowed origins for bridge messages
+  var ALLOWED_HOSTS = ['iveplay.io', 'localhost'];
+
+  function isAllowedOrigin(origin) {
+    try {
+      var hostname = new URL(origin).hostname;
+      if (hostname === 'localhost') return true;
+      if (hostname === 'iveplay.io' || hostname.endsWith('.iveplay.io')) return true;
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Intercept ive-play bridge messages and forward to RN
+  window.addEventListener('message', function(event) {
+    if (event.source !== window) return;
+    if (!event.data || event.data.from !== 'iveplay') return;
+    if (!isAllowedOrigin(window.location.origin)) return;
+
+    // Forward entire message to RN
+    window.ReactNativeWebView.postMessage(JSON.stringify(event.data));
+  });
+
+  // RN calls this to send responses back to ive-play
+  window.__ive_bridge_respond = function(responseJson) {
+    try {
+      var response = JSON.parse(responseJson);
+      window.postMessage(response, '*');
+    } catch (e) {}
+  };
 })();
 true;
 `

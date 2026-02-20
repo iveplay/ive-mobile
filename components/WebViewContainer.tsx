@@ -1,9 +1,9 @@
-import { forwardRef, useCallback, useRef, useEffect } from 'react'
+import { forwardRef, useCallback, useRef, useEffect, useMemo } from 'react'
 import { WebView } from 'react-native-webview'
 import type { WebViewNavigation } from 'react-native-webview'
 import { useTabStore } from '@/store/useTabStore'
 import { INJECTED_VIDEO_DETECTION_JS } from '@/utils/injected-js'
-import { handleWebViewMessage } from '@/utils/message-handler'
+import { createMessageHandler } from '@/utils/message-handler'
 
 interface Props {
   tabId: string
@@ -23,6 +23,9 @@ const WebViewContainer = forwardRef<WebView, Props>(
     // Track the URL the WebView is actually showing to avoid
     // re-navigating when onNavigationStateChange updates the store
     const currentWebViewUrl = useRef(url)
+
+    // Create message handler bound to this WebView's ref for bridge responses
+    const handleMessage = useMemo(() => createMessageHandler(internalRef), [])
 
     // Callback ref to register with parent and forward to forwardRef
     const setRef = useCallback(
@@ -84,7 +87,7 @@ const WebViewContainer = forwardRef<WebView, Props>(
         style={{ flex: 1 }}
         onNavigationStateChange={onNavigationStateChange}
         onOpenWindow={onOpenWindow}
-        onMessage={handleWebViewMessage}
+        onMessage={handleMessage}
         injectedJavaScript={INJECTED_VIDEO_DETECTION_JS}
         mediaPlaybackRequiresUserAction={false}
         javaScriptEnabled

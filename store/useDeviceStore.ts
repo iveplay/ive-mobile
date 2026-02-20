@@ -166,6 +166,10 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
 
     try {
       const dm = getDeviceManager()
+      console.log('◇─◇──◇────◇────◇─乁(ツ)ㄏ─◇────◇─────◇──◇─◇')
+      console.log('dm, handy')
+      console.log(dm, handyDevice, scriptData)
+      console.log('◇─◇──◇────◇────◇─乁(ツ)ㄏ─◇────◇─────◇──◇─◇')
       const result = await dm.loadScript(scriptData)
 
       if (result.success && result.funscript) {

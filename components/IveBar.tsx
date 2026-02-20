@@ -58,7 +58,11 @@ export default function IveBar() {
             ]}
           />
           <Text style={styles.deviceText}>
-            {handyConnected ? (scriptLoaded ? 'Synced' : 'No script') : 'Handy'}
+            {handyConnected
+              ? scriptLoaded
+                ? 'Script loaded'
+                : 'No script'
+              : 'Not connected'}
           </Text>
         </View>
       </View>
