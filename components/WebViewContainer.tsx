@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useRef, useEffect, useMemo } from 'react'
 import { WebView } from 'react-native-webview'
 import type { WebViewNavigation } from 'react-native-webview'
 import { useTabStore } from '@/store/useTabStore'
-import { INJECTED_JS } from '@/utils/injected'
+import { INJECTED_ADBLOCK_EARLY_JS, INJECTED_JS } from '@/utils/injected'
 import { createMessageHandler } from '@/utils/message-handler'
 
 interface Props {
@@ -88,6 +88,7 @@ const WebViewContainer = forwardRef<WebView, Props>(
         onNavigationStateChange={onNavigationStateChange}
         onOpenWindow={onOpenWindow}
         onMessage={handleMessage}
+        injectedJavaScriptBeforeContentLoaded={INJECTED_ADBLOCK_EARLY_JS}
         injectedJavaScript={INJECTED_JS}
         mediaPlaybackRequiresUserAction={false}
         javaScriptEnabled
