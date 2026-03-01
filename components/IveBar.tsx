@@ -92,8 +92,13 @@ export default function IveBar({ onDeselectVideo }: IveBarProps) {
             onPress={onDeselectVideo}
             style={styles.changeBtn}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
           >
-            <Ionicons name='swap-horizontal' size={16} color={COLORS.brand} />
+            <Ionicons
+              name='close-circle'
+              size={18}
+              color={COLORS.textSecondary}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -104,8 +109,6 @@ export default function IveBar({ onDeselectVideo }: IveBarProps) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.brand,
   },
   hintRow: {
     flexDirection: 'row',
@@ -119,11 +122,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
   },
   progressTrack: {
-    height: 3,
+    height: 2,
     backgroundColor: COLORS.inputBg,
   },
   progressFill: {
-    height: 3,
+    height: 2,
     backgroundColor: COLORS.brand,
   },
   info: {
@@ -187,5 +190,6 @@ const styles = StyleSheet.create({
   },
   changeBtn: {
     padding: SPACING.xs,
+    marginLeft: SPACING.xs,
   },
 })

@@ -10,6 +10,7 @@ import WebViewContainer from '@/components/WebViewContainer'
 import { MAX_ALIVE_TABS } from '@/constants/browser'
 import { COLORS } from '@/constants/theme'
 import { usePlaybackSync } from '@/hooks/usePlaybackSync'
+import { useDeviceStore } from '@/store/useDeviceStore'
 import { useTabStore, useCurrentTab } from '@/store/useTabStore'
 import { useVideoStore } from '@/store/useVideoStore'
 
@@ -22,6 +23,7 @@ export default function BrowserScreen() {
   const currentTab = useCurrentTab()
   const resetVideo = useVideoStore((s) => s.reset)
   const pauseVideo = useVideoStore((s) => s.pause)
+  const stopPlayback = useDeviceStore((s) => s.stopPlayback)
 
   // Bridge video playback → Handy device
   usePlaybackSync()
@@ -110,7 +112,8 @@ export default function BrowserScreen() {
     ref?.injectJavaScript(
       'if (window.__ive_deselect_video) window.__ive_deselect_video(); true;',
     )
-  }, [currentTabId])
+    stopPlayback()
+  }, [currentTabId, stopPlayback])
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>

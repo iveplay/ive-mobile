@@ -75,6 +75,8 @@ export const INJECTED_VIDEO_DETECTION = `
   window.__ive_deselect_video = function() {
     detachListeners();
     selectedVideo = null;
+    trackedVideos = [];
+    removeOverlays();
     postToRN('video:lost', null);
     scan();
   };
@@ -102,23 +104,23 @@ export const INJECTED_VIDEO_DETECTION = `
 
     var btn = document.createElement('button');
     btn.className = '__ive-sync-btn';
-    btn.textContent = 'ive';
+    btn.textContent = 'IVE';
     btn.setAttribute('style',
       'pointer-events:auto;' +
       'display:flex;' +
       'align-items:center;' +
       'justify-content:center;' +
-      'background:rgba(123,2,77,0.85);' +
+      'background:linear-gradient(135deg, #9a0361 0%, #7b024d 50%, #5c0139 100%);' +
       'color:#fff;' +
-      'border:2px solid rgba(255,255,255,0.3);' +
-      'border-radius:50%;' +
-      'width:36px;' +
-      'height:36px;' +
+      'border:none;' +
+      'border-radius:10px;' +
+      'width:40px;' +
+      'height:28px;' +
       'padding:0;' +
-      'font-size:12px;' +
+      'font-size:13px;' +
       'font-weight:800;' +
       'font-family:-apple-system,BlinkMacSystemFont,sans-serif;' +
-      'letter-spacing:0.5px;' +
+      'letter-spacing:1.5px;' +
       'cursor:pointer;' +
       'box-shadow:0 2px 10px rgba(0,0,0,0.5);' +
       '-webkit-tap-highlight-color:transparent;'

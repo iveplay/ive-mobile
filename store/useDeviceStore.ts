@@ -4,7 +4,14 @@ import type { DeviceInfo, Funscript, ScriptData } from 'ive-connect'
 import { create } from 'zustand'
 
 const STORAGE_KEY = 'ive-device'
+const HISTORY_KEY = 'ive-script-history'
+const MAX_HISTORY = 50
 const APPLICATION_ID = 'h_Jw26kJiyU3JZ2vV_X5TYutefunJJKe'
+
+export interface ScriptHistoryEntry {
+  url: string
+  timestamp: number
+}
 
 // Singleton instances — live outside Zustand to avoid serialization issues
 let deviceManager: DeviceManager | null = null
@@ -24,6 +31,7 @@ interface DeviceState {
   scriptLoaded: boolean
   scriptUrl: string
   funscript: Funscript | null
+  scriptHistory: ScriptHistoryEntry[]
   error: string | null
   isConnecting: boolean
   loaded: boolean
@@ -35,6 +43,7 @@ interface DeviceStore extends DeviceState {
   disconnectHandy: () => Promise<void>
   loadScript: (scriptData: ScriptData) => Promise<boolean>
   clearScript: () => void
+  stopPlayback: () => void
   clearError: () => void
   /** Direct access to HandyDevice for playback sync */
   getHandyDevice: () => HandyDevice | null
@@ -47,6 +56,7 @@ const initialState: DeviceState = {
   scriptLoaded: false,
   scriptUrl: '',
   funscript: null,
+  scriptHistory: [],
   error: null,
   isConnecting: false,
   loaded: false,
@@ -59,21 +69,28 @@ const persistKey = (key: string) => {
   ).catch(() => {})
 }
 
+const persistHistory = (history: ScriptHistoryEntry[]) => {
+  AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history)).catch(() => {})
+}
+
 export const useDeviceStore = create<DeviceStore>((set, get) => ({
   ...initialState,
 
   load: async () => {
     try {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY)
+      const [raw, historyRaw] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEY),
+        AsyncStorage.getItem(HISTORY_KEY),
+      ])
+      const update: Partial<DeviceState> = { loaded: true }
       if (raw) {
         const parsed = JSON.parse(raw) as { handyConnectionKey?: string }
-        set({
-          handyConnectionKey: parsed.handyConnectionKey ?? '',
-          loaded: true,
-        })
-      } else {
-        set({ loaded: true })
+        update.handyConnectionKey = parsed.handyConnectionKey ?? ''
       }
+      if (historyRaw) {
+        update.scriptHistory = JSON.parse(historyRaw) as ScriptHistoryEntry[]
+      }
+      set(update)
     } catch {
       set({ loaded: true })
     }
@@ -166,17 +183,23 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
 
     try {
       const dm = getDeviceManager()
-      console.log('◇─◇──◇────◇────◇─乁(ツ)ㄏ─◇────◇─────◇──◇─◇')
-      console.log('dm, handy')
-      console.log(dm, handyDevice, scriptData)
-      console.log('◇─◇──◇────◇────◇─乁(ツ)ㄏ─◇────◇─────◇──◇─◇')
       const result = await dm.loadScript(scriptData)
 
       if (result.success && result.funscript) {
+        const url = scriptData.url ?? ''
+        // Add to history (dedupe by url, most recent first)
+        const prev = get().scriptHistory.filter((e) => e.url !== url)
+        const history = [{ url, timestamp: Date.now() }, ...prev].slice(
+          0,
+          MAX_HISTORY,
+        )
+        persistHistory(history)
+
         set({
           scriptLoaded: true,
-          scriptUrl: scriptData.url ?? '',
+          scriptUrl: url,
           funscript: result.funscript,
+          scriptHistory: history,
         })
         return true
       }
@@ -191,9 +214,18 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
   },
 
   clearScript: () => {
+    if (handyDevice) {
+      handyDevice.stop().catch(() => {})
+    }
     const dm = getDeviceManager()
     dm.clearScript()
     set({ scriptLoaded: false, scriptUrl: '', funscript: null })
+  },
+
+  stopPlayback: () => {
+    if (handyDevice) {
+      handyDevice.stop().catch(() => {})
+    }
   },
 
   clearError: () => set({ error: null }),
