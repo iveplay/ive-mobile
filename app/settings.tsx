@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import {
+  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
@@ -68,89 +69,97 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <HandySettings />
+      <KeyboardAvoidingView style={styles.flex} behavior='padding'>
+        <ScrollView contentContainerStyle={styles.content}>
+          <HandySettings />
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Homepage</Text>
-          <TextInput
-            value={homepageInput}
-            onChangeText={setHomepageInput}
-            onFocus={() => setHomepageFocused(true)}
-            onBlur={handleHomepageBlur}
-            onSubmitEditing={handleHomepageBlur}
-            placeholder='https://example.com'
-            placeholderTextColor={COLORS.textDisabled}
-            style={[
-              styles.textInput,
-              homepageFocused && styles.textInputFocused,
-            ]}
-            autoCapitalize='none'
-            autoCorrect={false}
-            keyboardType='url'
-            returnKeyType='done'
-          />
-          <Text style={styles.hint}>Shown in the tab view page</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Search Engine</Text>
-          <View style={styles.optionGroup}>
-            {ENGINE_OPTIONS.map(({ key, label }, i) => {
-              const selected = searchEngine === key
-              const isFirst = i === 0
-              const isLast = i === ENGINE_OPTIONS.length - 1
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[
-                    styles.option,
-                    isFirst && styles.optionFirst,
-                    isLast && styles.optionLast,
-                  ]}
-                  onPress={() => setSearchEngine(key)}
-                >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      selected && styles.optionTextSelected,
-                    ]}
-                  >
-                    {label}
-                  </Text>
-                  {selected && (
-                    <Ionicons name='checkmark' size={18} color={COLORS.brand} />
-                  )}
-                </TouchableOpacity>
-              )
-            })}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Homepage</Text>
+            <TextInput
+              value={homepageInput}
+              onChangeText={setHomepageInput}
+              onFocus={() => setHomepageFocused(true)}
+              onBlur={handleHomepageBlur}
+              onSubmitEditing={handleHomepageBlur}
+              placeholder='https://example.com'
+              placeholderTextColor={COLORS.textDisabled}
+              style={[
+                styles.textInput,
+                homepageFocused && styles.textInputFocused,
+              ]}
+              autoCapitalize='none'
+              autoCorrect={false}
+              keyboardType='url'
+              returnKeyType='done'
+            />
+            <Text style={styles.hint}>Shown in the tab view page</Text>
           </View>
 
-          {searchEngine === 'custom' && (
-            <View style={styles.subSection}>
-              <Text style={styles.subLabel}>Custom search URL</Text>
-              <TextInput
-                value={customInput}
-                onChangeText={setCustomInput}
-                onFocus={() => setCustomFocused(true)}
-                onBlur={handleCustomBlur}
-                onSubmitEditing={handleCustomBlur}
-                placeholder='https://example.com/search?q=%s'
-                placeholderTextColor={COLORS.textDisabled}
-                style={[
-                  styles.textInput,
-                  customFocused && styles.textInputFocused,
-                ]}
-                autoCapitalize='none'
-                autoCorrect={false}
-                keyboardType='url'
-                returnKeyType='done'
-              />
-              <Text style={styles.hint}>Use %s where the query should go</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Search Engine</Text>
+            <View style={styles.optionGroup}>
+              {ENGINE_OPTIONS.map(({ key, label }, i) => {
+                const selected = searchEngine === key
+                const isFirst = i === 0
+                const isLast = i === ENGINE_OPTIONS.length - 1
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      styles.option,
+                      isFirst && styles.optionFirst,
+                      isLast && styles.optionLast,
+                    ]}
+                    onPress={() => setSearchEngine(key)}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        selected && styles.optionTextSelected,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                    {selected && (
+                      <Ionicons
+                        name='checkmark'
+                        size={18}
+                        color={COLORS.brand}
+                      />
+                    )}
+                  </TouchableOpacity>
+                )
+              })}
             </View>
-          )}
-        </View>
-      </ScrollView>
+
+            {searchEngine === 'custom' && (
+              <View style={styles.subSection}>
+                <Text style={styles.subLabel}>Custom search URL</Text>
+                <TextInput
+                  value={customInput}
+                  onChangeText={setCustomInput}
+                  onFocus={() => setCustomFocused(true)}
+                  onBlur={handleCustomBlur}
+                  onSubmitEditing={handleCustomBlur}
+                  placeholder='https://example.com/search?q=%s'
+                  placeholderTextColor={COLORS.textDisabled}
+                  style={[
+                    styles.textInput,
+                    customFocused && styles.textInputFocused,
+                  ]}
+                  autoCapitalize='none'
+                  autoCorrect={false}
+                  keyboardType='url'
+                  returnKeyType='done'
+                />
+                <Text style={styles.hint}>
+                  Use %s where the query should go
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
@@ -159,6 +168,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  flex: {
+    flex: 1,
   },
   header: {
     height: 56,
