@@ -56,12 +56,12 @@ export async function handleBridgeMessage(
       // ============================================
       case 'ive:select_script': {
         const { scriptId } = message as BridgeMessage & { scriptId: string }
-        // Store pending script — usePlaybackSync will pick it up
-        // For now, we try to load it directly if we have an entry with this script
         const store = useDeviceStore.getState()
-        if (store.handyConnected) {
-          // scriptId in ive-play is the script URL
-          await store.loadScript({ type: 'url', url: scriptId as string })
+        if (store.handyConnected || store.autoblowConnected) {
+          // Fire-and-forget — don't block the bridge response
+          store
+            .loadScript({ type: 'url', url: scriptId as string })
+            .catch(() => {})
         }
         respond(respondFn, id, true)
         break
@@ -84,8 +84,9 @@ export async function handleBridgeMessage(
 
         if (scriptUrl) {
           const store = useDeviceStore.getState()
-          if (store.handyConnected) {
-            await store.loadScript({ type: 'url', url: scriptUrl })
+          if (store.handyConnected || store.autoblowConnected) {
+            // Fire-and-forget — don't block the bridge response
+            store.loadScript({ type: 'url', url: scriptUrl }).catch(() => {})
           }
         }
 

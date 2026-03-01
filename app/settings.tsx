@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { AutoblowSettings } from '@/components/AutoblowSettings'
 import { HandySettings } from '@/components/HandySettings'
 import { COLORS, FONT_SIZES, SPACING } from '@/constants/theme'
 import {
@@ -72,6 +73,7 @@ export default function SettingsScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior='padding'>
         <ScrollView contentContainerStyle={styles.content}>
           <HandySettings />
+          <AutoblowSettings />
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Homepage</Text>

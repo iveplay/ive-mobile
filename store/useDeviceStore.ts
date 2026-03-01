@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { DeviceManager, HandyDevice } from 'ive-connect'
+import { DeviceManager, HandyDevice, AutoblowDevice } from 'ive-connect'
 import type { DeviceInfo, Funscript, ScriptData } from 'ive-connect'
 import { create } from 'zustand'
 
@@ -16,6 +16,7 @@ export interface ScriptHistoryEntry {
 // Singleton instances — live outside Zustand to avoid serialization issues
 let deviceManager: DeviceManager | null = null
 let handyDevice: HandyDevice | null = null
+let autoblowDevice: AutoblowDevice | null = null
 
 function getDeviceManager(): DeviceManager {
   if (!deviceManager) {
@@ -31,11 +32,17 @@ interface DeviceState {
   handyOffset: number
   handyStrokeMin: number
   handyStrokeMax: number
+  autoblowConnected: boolean
+  autoblowDeviceToken: string
+  autoblowDeviceInfo: DeviceInfo | null
+  autoblowOffset: number
+  isConnectingAutoblow: boolean
   scriptLoaded: boolean
   scriptUrl: string
   funscript: Funscript | null
   scriptHistory: ScriptHistoryEntry[]
-  error: string | null
+  handyError: string | null
+  autoblowError: string | null
   isConnecting: boolean
   loaded: boolean
 }
@@ -46,12 +53,18 @@ interface DeviceStore extends DeviceState {
   disconnectHandy: () => Promise<void>
   setHandyOffset: (offset: number) => Promise<boolean>
   setHandyStrokeSettings: (min: number, max: number) => Promise<boolean>
+  connectAutoblow: (deviceToken: string) => Promise<boolean>
+  disconnectAutoblow: () => Promise<void>
+  setAutoblowOffset: (offset: number) => Promise<boolean>
   loadScript: (scriptData: ScriptData) => Promise<boolean>
   clearScript: () => void
   stopPlayback: () => void
-  clearError: () => void
+  clearHandyError: () => void
+  clearAutoblowError: () => void
   /** Direct access to HandyDevice for playback sync */
   getHandyDevice: () => HandyDevice | null
+  /** Direct access to AutoblowDevice for playback sync */
+  getAutoblowDevice: () => AutoblowDevice | null
 }
 
 const initialState: DeviceState = {
@@ -61,11 +74,17 @@ const initialState: DeviceState = {
   handyOffset: 0,
   handyStrokeMin: 0,
   handyStrokeMax: 1,
+  autoblowConnected: false,
+  autoblowDeviceToken: '',
+  autoblowDeviceInfo: null,
+  autoblowOffset: 0,
+  isConnectingAutoblow: false,
   scriptLoaded: false,
   scriptUrl: '',
   funscript: null,
   scriptHistory: [],
-  error: null,
+  handyError: null,
+  autoblowError: null,
   isConnecting: false,
   loaded: false,
 }
@@ -75,6 +94,8 @@ interface PersistedDeviceData {
   handyOffset?: number
   handyStrokeMin?: number
   handyStrokeMax?: number
+  autoblowDeviceToken?: string
+  autoblowOffset?: number
 }
 
 const persistDevice = (data: PersistedDeviceData) => {
@@ -112,6 +133,9 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
           update.handyStrokeMin = parsed.handyStrokeMin
         if (parsed.handyStrokeMax !== undefined)
           update.handyStrokeMax = parsed.handyStrokeMax
+        update.autoblowDeviceToken = parsed.autoblowDeviceToken ?? ''
+        if (parsed.autoblowOffset !== undefined)
+          update.autoblowOffset = parsed.autoblowOffset
       }
       if (historyRaw) {
         update.scriptHistory = JSON.parse(historyRaw) as ScriptHistoryEntry[]
@@ -123,7 +147,7 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
   },
 
   connectHandy: async (connectionKey: string) => {
-    set({ isConnecting: true, error: null })
+    set({ isConnecting: true, handyError: null })
     persistDevice({ handyConnectionKey: connectionKey })
 
     try {
@@ -152,7 +176,7 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
 
         handyDevice.on('error', (err: unknown) => {
           const msg = typeof err === 'string' ? err : String(err)
-          set({ error: `Handy: ${msg}` })
+          set({ handyError: msg })
         })
       } else {
         await handyDevice.updateConfig({ connectionKey })
@@ -189,11 +213,11 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
         return true
       }
 
-      set({ isConnecting: false, error: 'Failed to connect to Handy' })
+      set({ isConnecting: false, handyError: 'Failed to connect to Handy' })
       return false
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
-      set({ isConnecting: false, error: `Connection error: ${msg}` })
+      set({ isConnecting: false, handyError: `Connection error: ${msg}` })
       return false
     }
   },
@@ -235,13 +259,114 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
     set({
       handyConnected: false,
       handyDeviceInfo: null,
-      scriptLoaded: false,
-      error: null,
+      scriptLoaded: !get().autoblowConnected ? false : get().scriptLoaded,
+      handyError: null,
     })
   },
 
+  connectAutoblow: async (deviceToken: string) => {
+    set({ isConnectingAutoblow: true, autoblowError: null })
+    persistDevice({ autoblowDeviceToken: deviceToken })
+
+    try {
+      if (!autoblowDevice) {
+        autoblowDevice = new AutoblowDevice({ deviceToken })
+
+        autoblowDevice.on('connected', (deviceInfo: unknown) => {
+          set({
+            autoblowConnected: true,
+            autoblowDeviceInfo: (deviceInfo as DeviceInfo) ?? null,
+          })
+        })
+
+        autoblowDevice.on('disconnected', () => {
+          set({
+            autoblowConnected: false,
+            autoblowDeviceInfo: null,
+          })
+        })
+
+        autoblowDevice.on('error', (err: unknown) => {
+          const msg = typeof err === 'string' ? err : String(err)
+          set({ autoblowError: msg })
+        })
+      } else {
+        await autoblowDevice.updateConfig({ deviceToken })
+      }
+
+      const success = await autoblowDevice.connect()
+
+      if (success) {
+        const dm = getDeviceManager()
+        dm.registerDevice(autoblowDevice)
+
+        const info = autoblowDevice.getDeviceInfo()
+        set({
+          autoblowConnected: true,
+          autoblowDeviceToken: deviceToken,
+          autoblowDeviceInfo: info,
+          isConnectingAutoblow: false,
+        })
+
+        // Apply saved offset
+        const { autoblowOffset, funscript } = get()
+        await autoblowDevice
+          .updateConfig({ offset: autoblowOffset })
+          .catch(() => {})
+
+        // If a script was already loaded, prepare it on the device
+        if (funscript) {
+          await autoblowDevice.prepareScript(funscript)
+        }
+
+        return true
+      }
+
+      set({
+        isConnectingAutoblow: false,
+        autoblowError: 'Failed to connect to Autoblow',
+      })
+      return false
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      set({
+        isConnectingAutoblow: false,
+        autoblowError: `Connection error: ${msg}`,
+      })
+      return false
+    }
+  },
+
+  disconnectAutoblow: async () => {
+    if (autoblowDevice) {
+      const dm = getDeviceManager()
+      dm.unregisterDevice(autoblowDevice.id)
+      await autoblowDevice.disconnect()
+    }
+    set({
+      autoblowConnected: false,
+      autoblowDeviceInfo: null,
+      scriptLoaded: !get().handyConnected ? false : get().scriptLoaded,
+      autoblowError: null,
+    })
+  },
+
+  setAutoblowOffset: async (offset: number) => {
+    set({ autoblowOffset: offset })
+    persistDevice({ autoblowOffset: offset })
+    if (autoblowDevice && get().autoblowConnected) {
+      try {
+        await autoblowDevice.updateConfig({ offset })
+        return true
+      } catch {
+        return false
+      }
+    }
+    return true
+  },
+
   loadScript: async (scriptData: ScriptData) => {
-    set({ error: null })
+    set({ handyError: null, autoblowError: null })
 
     try {
       const dm = getDeviceManager()
@@ -266,11 +391,15 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
         return true
       }
 
-      set({ error: result.error ?? 'Failed to load script' })
+      const scriptErr = result.error ?? 'Failed to load script'
+      if (get().handyConnected) set({ handyError: scriptErr })
+      if (get().autoblowConnected) set({ autoblowError: scriptErr })
       return false
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
-      set({ error: `Script error: ${msg}` })
+      const scriptErr = `Script error: ${msg}`
+      if (get().handyConnected) set({ handyError: scriptErr })
+      if (get().autoblowConnected) set({ autoblowError: scriptErr })
       return false
     }
   },
@@ -278,6 +407,9 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
   clearScript: () => {
     if (handyDevice) {
       handyDevice.stop().catch(() => {})
+    }
+    if (autoblowDevice) {
+      autoblowDevice.stop().catch(() => {})
     }
     const dm = getDeviceManager()
     dm.clearScript()
@@ -288,9 +420,16 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
     if (handyDevice) {
       handyDevice.stop().catch(() => {})
     }
+    if (autoblowDevice) {
+      autoblowDevice.stop().catch(() => {})
+    }
   },
 
-  clearError: () => set({ error: null }),
+  clearHandyError: () => set({ handyError: null }),
+
+  clearAutoblowError: () => set({ autoblowError: null }),
 
   getHandyDevice: () => handyDevice,
+
+  getAutoblowDevice: () => autoblowDevice,
 }))

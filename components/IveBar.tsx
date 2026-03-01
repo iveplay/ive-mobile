@@ -27,7 +27,10 @@ export default function IveBar({ onDeselectVideo }: IveBarProps) {
   const isBuffering = useVideoStore((s) => s.isBuffering)
 
   const handyConnected = useDeviceStore((s) => s.handyConnected)
+  const autoblowConnected = useDeviceStore((s) => s.autoblowConnected)
   const scriptLoaded = useDeviceStore((s) => s.scriptLoaded)
+
+  const anyDeviceConnected = handyConnected || autoblowConnected
 
   // Videos detected but user hasn't selected one yet
   if (videosAvailable && !hasVideo) {
@@ -74,13 +77,13 @@ export default function IveBar({ onDeselectVideo }: IveBarProps) {
           <View
             style={[
               styles.deviceDot,
-              handyConnected
+              anyDeviceConnected
                 ? styles.deviceConnected
                 : styles.deviceDisconnected,
             ]}
           />
           <Text style={styles.deviceText}>
-            {handyConnected
+            {anyDeviceConnected
               ? scriptLoaded
                 ? 'Script loaded'
                 : 'No script'
