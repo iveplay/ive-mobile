@@ -28,6 +28,9 @@ interface DeviceState {
   handyConnected: boolean
   handyConnectionKey: string
   handyDeviceInfo: DeviceInfo | null
+  handyOffset: number
+  handyStrokeMin: number
+  handyStrokeMax: number
   scriptLoaded: boolean
   scriptUrl: string
   funscript: Funscript | null
@@ -41,6 +44,8 @@ interface DeviceStore extends DeviceState {
   load: () => Promise<void>
   connectHandy: (connectionKey: string) => Promise<boolean>
   disconnectHandy: () => Promise<void>
+  setHandyOffset: (offset: number) => Promise<boolean>
+  setHandyStrokeSettings: (min: number, max: number) => Promise<boolean>
   loadScript: (scriptData: ScriptData) => Promise<boolean>
   clearScript: () => void
   stopPlayback: () => void
@@ -53,6 +58,9 @@ const initialState: DeviceState = {
   handyConnected: false,
   handyConnectionKey: '',
   handyDeviceInfo: null,
+  handyOffset: 0,
+  handyStrokeMin: 0,
+  handyStrokeMax: 1,
   scriptLoaded: false,
   scriptUrl: '',
   funscript: null,
@@ -62,11 +70,23 @@ const initialState: DeviceState = {
   loaded: false,
 }
 
-const persistKey = (key: string) => {
-  AsyncStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ handyConnectionKey: key }),
-  ).catch(() => {})
+interface PersistedDeviceData {
+  handyConnectionKey?: string
+  handyOffset?: number
+  handyStrokeMin?: number
+  handyStrokeMax?: number
+}
+
+const persistDevice = (data: PersistedDeviceData) => {
+  AsyncStorage.getItem(STORAGE_KEY)
+    .then((raw) => {
+      const existing: PersistedDeviceData = raw ? JSON.parse(raw) : {}
+      return AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ ...existing, ...data }),
+      )
+    })
+    .catch(() => {})
 }
 
 const persistHistory = (history: ScriptHistoryEntry[]) => {
@@ -84,8 +104,14 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
       ])
       const update: Partial<DeviceState> = { loaded: true }
       if (raw) {
-        const parsed = JSON.parse(raw) as { handyConnectionKey?: string }
+        const parsed = JSON.parse(raw) as PersistedDeviceData
         update.handyConnectionKey = parsed.handyConnectionKey ?? ''
+        if (parsed.handyOffset !== undefined)
+          update.handyOffset = parsed.handyOffset
+        if (parsed.handyStrokeMin !== undefined)
+          update.handyStrokeMin = parsed.handyStrokeMin
+        if (parsed.handyStrokeMax !== undefined)
+          update.handyStrokeMax = parsed.handyStrokeMax
       }
       if (historyRaw) {
         update.scriptHistory = JSON.parse(historyRaw) as ScriptHistoryEntry[]
@@ -98,7 +124,7 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
 
   connectHandy: async (connectionKey: string) => {
     set({ isConnecting: true, error: null })
-    persistKey(connectionKey)
+    persistDevice({ handyConnectionKey: connectionKey })
 
     try {
       // Reuse or create device
@@ -146,8 +172,16 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
           isConnecting: false,
         })
 
+        // Apply saved offset & stroke settings
+        const { handyOffset, handyStrokeMin, handyStrokeMax, funscript } = get()
+        await handyDevice
+          .updateConfig({
+            offset: handyOffset,
+            stroke: { min: handyStrokeMin, max: handyStrokeMax },
+          })
+          .catch(() => {})
+
         // If a script was already loaded, prepare it on the device
-        const { funscript } = get()
         if (funscript) {
           await handyDevice.prepareScript(funscript)
         }
@@ -162,6 +196,34 @@ export const useDeviceStore = create<DeviceStore>((set, get) => ({
       set({ isConnecting: false, error: `Connection error: ${msg}` })
       return false
     }
+  },
+
+  setHandyOffset: async (offset: number) => {
+    set({ handyOffset: offset })
+    persistDevice({ handyOffset: offset })
+    if (handyDevice && get().handyConnected) {
+      try {
+        await handyDevice.updateConfig({ offset })
+        return true
+      } catch {
+        return false
+      }
+    }
+    return true
+  },
+
+  setHandyStrokeSettings: async (min: number, max: number) => {
+    set({ handyStrokeMin: min, handyStrokeMax: max })
+    persistDevice({ handyStrokeMin: min, handyStrokeMax: max })
+    if (handyDevice && get().handyConnected) {
+      try {
+        await handyDevice.updateConfig({ stroke: { min, max } })
+        return true
+      } catch {
+        return false
+      }
+    }
+    return true
   },
 
   disconnectHandy: async () => {
